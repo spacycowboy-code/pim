@@ -1,0 +1,43 @@
+# 默认所有文本文件在仓库里统一 LF,签出时各自平台转换
+* text=auto eol=lf
+
+# Python / web / 配置文件强制 LF(Linux 友好)
+*.py        text eol=lf
+*.pyi       text eol=lf
+*.toml      text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+*.json      text eol=lf
+*.md        text eol=lf
+*.txt       text eol=lf
+*.cfg       text eol=lf
+*.ini       text eol=lf
+*.html      text eol=lf
+*.css       text eol=lf
+*.js        text eol=lf
+
+# PowerShell / Windows 批处理保持 CRLF
+*.ps1       text eol=crlf
+*.psm1      text eol=crlf
+*.psd1      text eol=crlf
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+
+# Shell 脚本强制 LF(Windows 签出也要是 LF,否则 Linux 执行报错)
+*.sh        text eol=lf
+
+# 二进制(不做换行符转换)
+*.png       binary
+*.jpg       binary
+*.gif       binary
+*.ico       binary
+*.gz        binary
+*.zip       binary
+*.pdf       binary
+*.woff      binary
+*.woff2     binary
+*.ttf       binary
+*.otf       binary
+
+# uv.lock 大但是文本,仓库里统一 LF,但不参与 diff(查看时无意义)
+uv.lock     linguist-generated=true -diff

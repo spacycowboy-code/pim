@@ -1,0 +1,60 @@
+# Python 产物
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# IDE / 编辑器
+.vscode/
+.idea/
+.history/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# -----------------------------------------------------------------------------
+# pim-analysis 特有:全部运行时数据
+# -----------------------------------------------------------------------------
+# ⚠️ data/rtd/cookies.json 含 CF_Authorization 凭据,绝对不能入库
+# data/blob/*.zip 几百 MB 整机测试压缩包
+# data/raw/*/*.json.gz 真实产线序列号的测试数据
+# data/server.log* 日志
+# data/serials.json 内部序列号清单,降级候选用,保守 ignore(Linux 侧按需要自建)
+data/
+
+# 本地备份(删缓存改造前留的旧源码副本)
+.backup/
+
+# 从浏览器另存的 RTD Dashboard 页面(体积大,仅参考用)
+chart/
+
+# 本地快照目录(archive/snapshot/)
+snapshot/
+archive/
+
+# 日志
+*.log
+
+# 临时诊断脚本和截图(_tmp_* 命名约定)
+_tmp_*
+
+# Claude Code / Kiro CLI 自身状态目录(.kiro 本体留下,只排状态)
+.claude/
+.kiro/browser-profiles/
+
+# 环境机密
+.env
+config/.env
+*.pem
+*.key
+
+# 本地覆盖的 commit 消息草稿
+COMMIT_MSG.txt

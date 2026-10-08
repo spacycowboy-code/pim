@@ -1,0 +1,477 @@
+/* PIM 查询工具 —— Ericsson Design System (EDS) 浅色主题
+ *
+ * 所有色值、字号、间距都取自 EDS 规范，不自创。
+ * 三层视觉层次：系统层 #0c0c0c（最暗）→ 应用层 #ebebeb → 内容层 #fafafa（最亮）
+ * 字号只用 12/14/16/18/28/30/40，间距只用 4/8/16/24/32（8px 栅格）
+ * 圆角：tile 0 / 控件 3 / card 8
+ */
+
+:root{
+  /* 唯一交互强调色 */
+  --primary:#1174e6; --primary-hover:#0069c2; --primary-press:#005499; --link:#0069c2;
+  /* 三层视觉层级 */
+  --surface-system:#0c0c0c;
+  --surface-app:#ebebeb;
+  --surface:#fafafa;
+  --fill-input:#ffffff;
+  --fill-striped:#ebebeb; --fill-disabled:#f2f2f2; --fill-selected:#d3e3f7;
+  /* 文字 */
+  --on:#242424; --on-secondary:#6a6a6a; --on-disabled:#a4a4a4; --on-primary:#ffffff;
+  --on-system-secondary:#8b8b8b;
+  /* 边框 */
+  --border:#878787; --border-hover:#6a6a6a; --border-subtle:#dcdcdc;
+  --border-selected:#1174e6;
+  /* 状态色（必须同时配图标 + 文字） */
+  --st-cleared:#329864; --st-minor:#fad22d; --st-major:#d46617;
+  --st-critical:#ed0e00; --st-info:#1174e6; --st-indeterminate:#878787;
+  /* tag 浅底色 */
+  --tag-bg:#f8f8f8; --tag-bg-green:#f5faf7; --tag-bg-yellow:#fffdf5;
+  --tag-bg-blue:#f3f8fe; --tag-bg-orange:#fdf7f3; --tag-bg-red:#fef3f2;
+  /* 间距：8px 栅格 */
+  --sp-sm:4px; --sp:8px; --sp-lg:16px; --sp-xl:24px; --sp-xxl:32px;
+  /* 圆角 */
+  --r-tile:0px; --r-ctrl:3px; --r-card:8px;
+  --elev-3:0 1px 3px rgba(0,0,0,.10);
+  --font:"Ericsson Hilda","Arial","Source Han Sans SC","Microsoft YaHei",sans-serif;
+  /* 数据可视化配色，多系列按顺序取 */
+  --dv1:#878787; --dv2:#976cf4; --dv3:#23969a; --dv4:#e65d6a;
+  --dv5:#333333; --dv6:#b98327;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:var(--font);
+  font-size:14px; font-weight:400; line-height:1.5;
+  color:var(--on);
+  background:var(--surface-app);
+}
+.hidden{display:none !important;}
+.wrap{max-width:100%;margin:0 auto;padding:0 var(--sp-xl);}
+
+/* ── 系统层 ─────────────────────────────────────── */
+.sys{
+  height:32px; background:var(--surface-system);
+  display:flex; align-items:center; gap:var(--sp-sm);
+  padding:0 var(--sp-xl); font-size:12px; color:var(--on-primary);
+}
+.sys-brand{font-weight:700;}
+.sys-sep{color:var(--on-system-secondary);}
+.sys-app{color:var(--on-system-secondary);}
+.sys-right{margin-left:auto;color:var(--on-system-secondary);}
+
+/* 快捷日期按钮组：让用户一键选常用区间，不用手打日期 */
+.quickdates{
+  /* 快捷日期按钮已移除（用户要求），保留一个空壳 class 以防万一；
+     实际没有元素再用它。 */
+  display:none;
+}
+
+/* tile 标题栏里的内联下拉（切换趋势粒度用） */
+.sel-inline{
+  font-family:inherit;font-size:12px;height:24px;
+  color:var(--on);background:var(--fill-input);
+  border:1px solid var(--border);border-radius:var(--r-ctrl);
+  margin-right:var(--sp-sm);
+}
+.sys-logout{
+  margin-left:var(--sp-lg);color:var(--on-system-secondary);
+  text-decoration:none;font-size:12px;
+}
+.sys-logout:hover{color:var(--on-primary);text-decoration:underline;}
+
+/* ── 应用层 ─────────────────────────────────────── */
+.app{background:var(--surface-app);padding:var(--sp-xl) 0 var(--sp-lg);}
+.eyebrow{font-size:12px;color:var(--on-secondary);margin-bottom:var(--sp);}
+h1{font-size:40px;font-weight:200;line-height:1.2;margin:0 0 var(--sp);}
+.lede{font-size:16px;margin:0 0 var(--sp-lg);color:var(--on);}
+.meta-row{display:flex;flex-wrap:wrap;gap:var(--sp);}
+
+/* ── 内容层：tile ───────────────────────────────── */
+.tile{
+  background:var(--surface);
+  border:1px solid var(--border-subtle);
+  border-radius:var(--r-tile);
+  margin-bottom:var(--sp-lg);
+}
+.tile-head{
+  display:flex;align-items:center;gap:var(--sp-lg);
+  padding:var(--sp-lg);border-bottom:1px solid var(--border-subtle);
+}
+.tile-head h2{font-size:30px;font-weight:200;line-height:1.2;margin:0;}
+.tile-actions{margin-left:auto;display:flex;gap:var(--sp);}
+.badge-num{
+  width:32px;height:32px;flex:0 0 32px;
+  background:var(--primary);color:var(--on-primary);
+  border-radius:var(--r-ctrl);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:700;
+}
+.tile-body{padding:var(--sp-lg);}
+
+/* ── 查询方式二选一（tab + 分组）───────────────────
+   两种并列但同一时刻只用一种。选中的 tab 高亮，没选中的那组控件
+   用 <fieldset disabled> 整体变灰 + 禁止交互。只用已有 EDS 变量。 */
+.mode-tabs{
+  display:flex;gap:0;margin-bottom:var(--sp-lg);
+  border-bottom:2px solid var(--border-subtle);
+}
+.mode-tab{
+  font-family:inherit;font-size:14px;height:40px;padding:0 var(--sp-lg);
+  background:transparent;border:none;cursor:pointer;
+  color:var(--on-secondary);
+  border-bottom:2px solid transparent;margin-bottom:-2px;
+}
+.mode-tab:hover{color:var(--on);}
+.mode-tab.is-active{color:var(--primary);border-bottom-color:var(--primary);font-weight:700;}
+/* 分组容器：fieldset 自带边框，这里清掉，只做布局用 */
+.mode-group{border:none;margin:0;padding:0;min-width:0;}
+/* 被禁用的那组整体变灰、挡住点击，一眼看出当前没在用它 */
+.mode-group:disabled{opacity:.45;}
+.mode-group[disabled]{opacity:.45;}
+
+/* ── 表单 ───────────────────────────────────────── */
+.form-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:var(--sp-lg);margin-bottom:var(--sp-lg);
+}
+.field{display:flex;flex-direction:column;gap:var(--sp-sm);}
+.field-wide{margin-bottom:var(--sp-lg);}
+.field label{font-size:14px;font-weight:400;color:var(--on);}
+/* ★ 选择器必须把 datetime-local 等类型也列进来。原来只写 input[type=text]，
+   时间框就拿不到这套尺寸、退回浏览器默认 —— 实测高 21px / 字号 13.3px /
+   边框 2px，而旁边的文本框和下拉是 32px / 14px / 1px，看着明显矮一截。
+   不用笼统的 .field input，因为那会把测试类别里的复选框也撑成 32px。 */
+.field input[type=text],.field input[type=datetime-local],
+.field input[type=date],.field input[type=time],
+.field input[type=number],.field select,.field textarea{
+  height:32px;padding:0 var(--sp);
+  font-family:var(--font);font-size:14px;color:var(--on);
+  background:var(--fill-input);
+  border:1px solid var(--border);border-radius:var(--r-ctrl);
+}
+.field textarea{height:auto;padding:var(--sp);resize:vertical;line-height:1.5;}
+.field input:focus,.field select:focus,.field textarea:focus{
+  outline:none;border-color:var(--border-selected);
+}
+.field input[readonly]{background:var(--fill-disabled);color:var(--on-secondary);}
+.hint{font-size:12px;color:var(--on-secondary);}
+
+/* ── Combobox（EDS 风格的产品号下拉）─────────────────────
+   HTML native datalist 的下拉浏览器自己画，用户看不出"可点击"，而且
+   样式不受控制。改成「input + 可见的 ▾ 按钮 + 自定义面板」：
+   - 保留自由输入（可输入列表外的产品号）
+   - 右侧 ▾ 永远可见，点一下展开
+   - 面板用 eds.css 的颜色和字号，和其他控件风格一致 */
+.combo{position:relative;}
+.combo input{
+  /* 加 .combo 一层包裹后 input 不再直接是 .field 的 flex 子，
+     不会自动 stretch 到栅格列宽；显式 100% 让它和旁边的时间框、
+     供应商下拉同宽。padding-right 留 32px 给 ▾ 按钮，不盖文字。*/
+  width:100%;box-sizing:border-box;padding-right:32px;
+}
+.combo-trigger{
+  position:absolute;top:0;right:0;height:32px;width:28px;
+  display:flex;align-items:center;justify-content:center;
+  background:transparent;border:none;color:var(--on-secondary);
+  font-size:12px;cursor:pointer;padding:0;
+}
+.combo-trigger:hover{color:var(--on);}
+.combo-menu{
+  position:absolute;top:34px;left:0;right:0;z-index:10;
+  margin:0;padding:4px 0;list-style:none;
+  background:var(--fill-input);
+  border:1px solid var(--border-subtle);border-radius:var(--r-ctrl);
+  box-shadow:var(--elev-3);
+  max-height:240px;overflow-y:auto;
+}
+.combo-menu[hidden]{display:none;}
+.combo-menu li{
+  padding:6px var(--sp);font-size:14px;color:var(--on);
+  cursor:pointer;line-height:1.4;
+}
+.combo-menu li:hover,.combo-menu li.active{
+  background:var(--fill-selected);color:var(--on);
+}
+.combo-menu li.empty{color:var(--on-secondary);cursor:default;}
+.combo-menu li.empty:hover{background:transparent;}
+
+/* ── DUT 明细筛选条 ─────────────────────────────
+   良率表上方的本地筛选器。所有展开的 DUT 明细共享这一套筛选器，
+   不额外查询。4 个控件水平排列，统一 32px 高、EDS 字号。*/
+.dut-filters{
+  display:flex;align-items:center;gap:var(--sp);
+  flex-wrap:wrap;margin:var(--sp-sm) 0 var(--sp-lg);
+}
+.dut-filters-label{font-size:14px;color:var(--on-secondary);}
+.dut-filter-input,.dut-filter-select{
+  height:32px;padding:0 var(--sp);
+  font-family:var(--font);font-size:14px;color:var(--on);
+  background:var(--fill-input);
+  border:1px solid var(--border);border-radius:var(--r-ctrl);
+  min-width:140px;
+}
+.dut-filter-input{min-width:180px;}
+.dut-filter-input:focus,.dut-filter-select:focus{
+  outline:none;border-color:var(--border-selected);
+}
+
+/* ── 表头内嵌筛选控件（DUT 明细表头第二行）─────────────────
+   在每列表头下方给筛选器一行，紧凑不占高。背景色稍深让"筛选区"和
+   普通表头有区别。字号 12/13px，控件高 26px —— 比正常 32px 矮一截，
+   避免整个 thead 过高。*/
+.filter-row th{
+  background:var(--surface-app);
+  padding:4px var(--sp-sm);
+  font-weight:400;
+}
+.col-filter{
+  width:100%;height:26px;padding:0 var(--sp-sm);
+  font-family:var(--font);font-size:13px;color:var(--on);
+  background:var(--fill-input);
+  border:1px solid var(--border-subtle);border-radius:var(--r-ctrl);
+  box-sizing:border-box;
+}
+.col-filter:focus{outline:none;border-color:var(--border-selected);}
+.col-filter:hover{border-color:var(--border-hover);}
+/* 条件改了但还没查：只给按钮加光圈。原来还配一句文字提示，用户反馈没用，
+   已删（光圈足够说明"有改动没生效"）。 */
+.btn-dirty{box-shadow:0 0 0 3px rgba(17,116,230,.28);}
+
+/* 查询进度：一次查询 60~120 秒，只把按钮变灰不够 —— 用户不知道还要等多久、
+   也不知道是不是卡死了。所以显式给出进度条 + 已用秒数 + 当前阶段。
+   ⚠️ 后端是一个同步请求、不上报进度，所以这个百分比是**按经验耗时估算**
+   的，不是真实进度。封顶 90%，真完成了才跳 100% —— 不假装精确。 */
+.qprogress{margin-top:var(--sp-lg);display:none;}
+.qprogress.on{display:block;}
+.qprogress-bar{
+  height:4px;background:var(--fill-selected);
+  border-radius:2px;overflow:hidden;
+}
+.qprogress-fill{
+  height:100%;width:0;background:var(--primary);
+  border-radius:2px;transition:width .4s linear;
+}
+.qprogress-text{
+  margin-top:6px;font-size:12px;color:var(--on-secondary);
+  display:flex;gap:var(--sp2);flex-wrap:wrap;
+}
+.qprogress-stage{color:var(--on);font-weight:700;}
+.inline-form{display:flex;align-items:flex-end;gap:var(--sp-lg);
+  flex-wrap:wrap;margin-bottom:var(--sp);}
+.inline-form .field{min-width:220px;}
+
+/* ── 按钮：高 32px，圆角 3px，14px/400 ────────────── */
+.actions{display:flex;align-items:center;gap:var(--sp);flex-wrap:wrap;}
+.btn{
+  height:32px;padding:0 var(--sp-lg);
+  font-family:var(--font);font-size:14px;font-weight:400;
+  border-radius:var(--r-ctrl);cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.btn-primary{background:var(--primary);color:var(--on-primary);border:1px solid var(--primary);}
+.btn-primary:hover{background:var(--primary-hover);border-color:var(--primary-hover);}
+.btn-primary:active{background:var(--primary-press);}
+.btn-primary:disabled{background:var(--on-disabled);border-color:var(--on-disabled);cursor:default;}
+.btn-secondary{background:transparent;color:var(--on);border:1px solid var(--on);}
+.btn-secondary:hover{background:var(--border-hover);color:var(--on-primary);border-color:var(--border-hover);}
+.btn-icon{
+  width:32px;height:32px;background:transparent;
+  border:1px solid var(--border);border-radius:var(--r-ctrl);
+  color:var(--on);cursor:pointer;font-size:14px;
+}
+.btn-icon:hover{background:var(--fill-hover,#dcdcdc);}
+.chk{display:inline-flex;align-items:center;gap:var(--sp-sm);font-size:14px;}
+
+/* ── tag：12px，文字固定灰色，颜色只在边框和图标 ──── */
+.tag{
+  display:inline-flex;align-items:center;gap:var(--sp-sm);
+  font-size:12px;font-weight:400;
+  padding:0 var(--sp);min-height:16px;border-radius:var(--r-ctrl);
+  color:var(--on-secondary);background:var(--tag-bg);
+  border:1px solid var(--on-secondary);white-space:nowrap;
+}
+.tag .ic{font-style:normal;font-size:12px;line-height:1;}
+.tag.green {background:var(--tag-bg-green); border-color:var(--st-cleared);}
+.tag.green  .ic{color:var(--st-cleared);}
+.tag.yellow{background:var(--tag-bg-yellow);border-color:var(--st-minor);}
+.tag.yellow .ic{color:var(--st-minor);}
+.tag.orange{background:var(--tag-bg-orange);border-color:var(--st-major);}
+.tag.orange .ic{color:var(--st-major);}
+.tag.red   {background:var(--tag-bg-red);   border-color:var(--st-critical);}
+.tag.red    .ic{color:var(--st-critical);}
+.tag.blue  {background:var(--tag-bg-blue);  border-color:var(--st-info);}
+.tag.blue   .ic{color:var(--st-info);}
+.tag.gray  {background:var(--tag-bg);       border-color:var(--st-indeterminate);}
+.tag.gray   .ic{color:var(--st-indeterminate);}
+
+/* ── inline notification：左侧 3px 状态色竖条 ────── */
+.notice{
+  background:var(--surface);border:1px solid var(--border-subtle);
+  border-left:3px solid var(--st-info);
+  padding:var(--sp-lg);margin-bottom:var(--sp-lg);
+  display:flex;gap:var(--sp);align-items:flex-start;font-size:14px;
+}
+.notice .ic{font-style:normal;flex:0 0 auto;}
+.notice.err{border-left-color:var(--st-critical);}
+.notice.err .ic{color:var(--st-critical);}
+.notice.warn{border-left-color:var(--st-major);}
+.notice.warn .ic{color:var(--st-major);}
+.notice.ok{border-left-color:var(--st-cleared);}
+.notice.ok .ic{color:var(--st-cleared);}
+.notice.info .ic{color:var(--st-info);}
+.notice pre{margin:var(--sp) 0 0;font-family:var(--font);font-size:12px;
+  white-space:pre-wrap;color:var(--on-secondary);}
+
+/* ── KPI card：#ffffff 圆角 8，只能在 tile 内 ────── */
+.kpi-row{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:var(--sp-lg);margin-bottom:var(--sp-lg);
+}
+.card{
+  background:var(--fill-input);border:1px solid var(--border-subtle);
+  border-radius:var(--r-card);padding:var(--sp-lg);box-shadow:var(--elev-3);
+}
+.kpi-label{font-size:12px;color:var(--on-secondary);margin-bottom:var(--sp-sm);}
+.kpi-value{font-size:28px;font-weight:700;line-height:1.2;color:var(--on);}
+.kpi-foot{margin-top:var(--sp);}
+
+/* ── 表格：表头 14/700 下边框 #878787，斑马纹 ────── */
+.table-scroll{overflow-x:auto;margin-top:var(--sp-lg);}
+.tbl{width:100%;border-collapse:collapse;font-size:14px;}
+.tbl th{
+  text-align:left;font-weight:700;padding:var(--sp);
+  border-bottom:1px solid var(--border);white-space:nowrap;
+}
+.tbl td{text-align:left;padding:var(--sp);border-bottom:1px solid var(--border-subtle);}
+.tbl tbody tr:nth-child(even){background:var(--fill-striped);}
+.tbl .num{font-variant-numeric:tabular-nums;}
+/* 有失败的行整行标出来，扫一眼就能定位问题区间。
+   用左边框 + 浅底而不是整行变红，避免颜色过重压住数字。 */
+.tbl tr.row-warn td{background:var(--tag-bg-yellow);}
+.tbl tr.row-warn td:first-child{box-shadow:inset 3px 0 0 var(--st-minor);}
+.tbl .muted{color:var(--on-secondary);}
+
+/* ── DUT 明细子表（良率表里展开的那一层）─────────────
+   嵌在父表一个单元格里，所以要和父表区分开：换个底色 + 左侧竖线表示层级。
+   字号比父表小一号，避免视觉上和父表抢主次。
+   只用已有的 EDS 变量，不新造色值。 */
+.dut-cell{
+  background:var(--fill-striped);
+  padding:var(--sp) var(--sp) var(--sp) var(--sp-xl);
+  box-shadow:inset 3px 0 0 var(--border);
+}
+.tbl-sub{font-size:13px;}
+.tbl-sub th{
+  text-align:left;padding:var(--sp-sm) var(--sp);
+  font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.04em;color:var(--on-secondary);
+  border-bottom:1px solid var(--border);
+}
+.tbl-sub td{
+  text-align:left;padding:var(--sp-sm) var(--sp);
+  border-bottom:1px solid var(--border-subtle);
+}
+.tbl-sub tbody tr:last-child td{border-bottom:none;}
+/* 子表里的小号按钮（「查看」送到单台详情） */
+.btn-sm{height:24px;padding:0 var(--sp);font-size:12px;}
+
+/* ── 图表 ───────────────────────────────────────── */
+.chart-wrap{width:100%;overflow-x:auto;}
+
+/* 多台同屏曲线：控件行 + 绘图容器 */
+.curve-ctl{
+  display:flex;flex-wrap:wrap;align-items:center;
+  gap:var(--sp-lg);margin:var(--sp) 0 var(--sp-lg);
+}
+.curve-ctl label{
+  display:flex;align-items:center;gap:var(--sp);
+  font-size:12px;color:var(--on-secondary);
+}
+.curve-ctl input[type=range]{width:180px;accent-color:var(--primary);}
+.curve-ctl output{
+  min-width:28px;text-align:right;
+  font-size:12px;color:var(--on);font-variant-numeric:tabular-nums;
+}
+.curve-ctl label.chk{cursor:pointer;}
+.curve-ctl input[type=checkbox]{accent-color:var(--primary);}
+.plot-box{
+  width:100%;height:420px;
+  background:var(--fill-input);border:1px solid var(--border-subtle);
+}
+canvas{max-width:100%;}
+#trendChart{width:100%;height:210px;}   /* 柱状图横向填满 tile-body */
+
+/* ── RTD 曲线卡片（每台一张，往下叠加）───────────────
+   和良率表的 DUT 子表一样，用已有 EDS 变量，不新造视觉规范。 */
+.curve-card{
+  border:1px solid var(--border-subtle);
+  margin-bottom:var(--sp-lg);
+}
+.curve-card-head{
+  display:flex;align-items:center;gap:var(--sp-lg);flex-wrap:wrap;
+  padding:var(--sp) var(--sp-lg);
+  background:var(--fill-striped);
+  border-bottom:1px solid var(--border-subtle);
+}
+.curve-card-title{font-weight:700;font-size:14px;}
+.curve-card-ctl{
+  margin-left:auto;display:flex;align-items:center;gap:var(--sp-lg);flex-wrap:wrap;
+}
+.curve-card-ctl label{font-size:12px;color:var(--on-secondary);}
+.curve-card .cardHint{padding:0 var(--sp-lg);margin:var(--sp) 0 0;}
+.curve-card .cardKpi{padding:0 var(--sp-lg);}
+.curve-card .cardPlot{height:360px;border:none;margin:var(--sp) 0 var(--sp-lg);}
+.curve-card .btnClose{color:var(--st-critical);}
+
+/* ── 热力图 ─────────────────────────────────────── */
+.heat{border-collapse:collapse;font-size:12px;}
+.heat th{
+  font-weight:400;color:var(--on-secondary);padding:var(--sp-sm);
+  text-align:left;white-space:nowrap;
+}
+.heat td{
+  width:26px;height:22px;text-align:center;
+  border:1px solid var(--surface);font-variant-numeric:tabular-nums;
+}
+
+/* ── 时间线（下层件追踪） ────────────────────────── */
+.timeline{list-style:none;margin:var(--sp-lg) 0 0;padding:0;}
+.timeline li{
+  padding:var(--sp-lg);margin-bottom:var(--sp);
+  background:var(--fill-input);border:1px solid var(--border-subtle);
+  border-radius:var(--r-card);box-shadow:var(--elev-3);
+}
+.tl-head{display:flex;align-items:center;gap:var(--sp);flex-wrap:wrap;
+  margin-bottom:var(--sp);}
+
+/* 下层件追踪 tile 里"按整机反查"的小节标题 */
+.part-section-head{
+  margin:var(--sp-xl) 0 var(--sp);font-size:15px;font-weight:600;
+  color:var(--on-primary);padding-top:var(--sp-lg);
+  border-top:1px solid var(--border-subtle);
+}
+.tl-sn{font-size:16px;font-weight:700;}
+.tl-time{font-size:12px;color:var(--on-secondary);}
+.tl-br{display:flex;gap:var(--sp-sm);flex-wrap:wrap;}
+
+/* 时间轴项里的「查看」按钮：靠右，和 FPY 良率表 DUT 明细行的「查看」风格一致 */
+.tl-view{margin-left:auto;}
+/* 展开 RTD 曲线卡片的 slot：卡片本身自带阴影/边框，这里只给上间距 */
+.tl-curve-slot:not(:empty){margin-top:var(--sp);}
+.tl-curve-slot .curve-card{box-shadow:none;border:1px solid var(--border-subtle);}
+
+.btn-ghost{background:transparent;border:1px solid var(--border-strong);
+  color:var(--on-primary);}
+.btn-ghost:hover{background:var(--fill-hover);}
+.btn-sm{padding:4px 10px;font-size:12px;min-height:26px;}
+
+.caption{font-size:12px;color:var(--on-secondary);margin:var(--sp) 0 0;}
+.foot{padding:var(--sp-xl) 0;font-size:12px;color:var(--on-secondary);}
+a{color:var(--link);}
+.spin{
+  display:inline-block;width:14px;height:14px;
+  border:2px solid var(--border-subtle);border-top-color:var(--primary);
+  border-radius:50%;animation:sp .8s linear infinite;
+}
+@keyframes sp{to{transform:rotate(360deg);}}

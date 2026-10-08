@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PIM 测试数据查询</title>
+<link rel="stylesheet" href="/static/eds.css">
+</head>
+<body>
+
+<!-- ── 系统层 #0c0c0c 32px（三层视觉层次最暗的一层，双主题同色）── -->
+<header class="sys">
+  <span class="sys-brand">Ericsson</span>
+  <span class="sys-sep">·</span>
+  <span class="sys-app">PIM 测试数据查询</span>
+  <span class="sys-right" id="sysMeta"></span>
+  <a class="sys-logout" href="/logout" title="退出登录">Sign out</a>
+</header>
+
+<!-- ── 应用层 #ebebeb（页面底色，绝不用纯白）── -->
+<div class="app">
+  <div class="wrap">
+    <div class="eyebrow">Manufacturing Intelligence · 生产测试数据</div>
+    <h1>PIM 良率与失效分析</h1>
+    <div class="meta-row" id="metaTags"></div>
+  </div>
+</div>
+
+<!-- ── 内容层：一连串 tile（#fafafa，圆角 0）── -->
+<main class="wrap">
+
+  <!-- 查询条件 tile -->
+  <section class="tile">
+    <div class="tile-head">
+      <span class="badge-num">1</span>
+      <h2>查询条件</h2>
+    </div>
+    <div class="tile-body">
+      <!-- 查询方式二选一：按条件 or 按序列号。两种并列，但同一时刻只用一种。
+           选中哪个，另一个那组控件就禁用变灰，避免误填、也讲清当前在用哪种。 -->
+      <div class="mode-tabs" id="modeTabs">
+        <button type="button" class="mode-tab is-active" data-mode="cond">
+          按产品 / 时间 / 供应商查
+        </button>
+        <button type="button" class="mode-tab" data-mode="sn">
+          按序列号列表查
+        </button>
+      </div>
+
+      <!-- A 组：按条件查 -->
+      <fieldset class="mode-group" id="groupCond">
+        <div class="form-grid">
+          <div class="field">
+            <label for="fProduct">产品号</label>
+            <div class="combo" id="prodCombo">
+              <input type="text" id="fProduct"
+                     role="combobox" aria-autocomplete="list"
+                     aria-expanded="false" aria-controls="prodMenu"
+                     placeholder="可直接输入，如 KRD 901 330/11">
+              <button type="button" class="combo-trigger" id="prodTrigger"
+                      aria-label="展开产品号候选" tabindex="-1">▾</button>
+              <ul class="combo-menu" id="prodMenu" role="listbox" hidden></ul>
+            </div>
+            <span class="hint" id="prodHint"></span>
+          </div>
+          <div class="field">
+            <label for="fFrom">开始时间</label>
+            <input type="datetime-local" id="fFrom" step="60">
+            <span class="hint" id="fromHint"></span>
+          </div>
+          <div class="field">
+            <label for="fTo">结束时间</label>
+            <input type="datetime-local" id="fTo" step="60">
+            <span class="hint" id="toHint"></span>
+          </div>
+          <div class="field">
+            <label for="fAntSup">天线供应商</label>
+            <select id="fAntSup"><option value="">全部</option></select>
+            <span class="hint" id="antSupHint"></span>
+          </div>
+          <div class="field">
+            <label for="fFuSup">滤波器供应商</label>
+            <select id="fFuSup"><option value="">全部</option></select>
+            <span class="hint" id="fuSupHint"></span>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- B 组：按序列号查 -->
+      <fieldset class="mode-group" id="groupSn" disabled>
+        <div class="field field-wide">
+          <label for="fSns">序列号列表</label>
+          <textarea id="fSns" rows="3"
+            placeholder="逗号或换行分隔，如&#10;EA8E538919, EA8E552678"></textarea>
+          <span class="hint" id="snHint"></span>
+        </div>
+      </fieldset>
+
+      <!-- 测试类别：两种方式都要选，所以放在二选一之外 -->
+      <div class="field">
+        <label>测试类别</label>
+        <div class="checkrow" id="fCat">
+          <label class="chk"><input type="checkbox" value="28" checked> 28</label>
+          <label class="chk"><input type="checkbox" value="212" checked> 212</label>
+          <label class="chk"><input type="checkbox" value="38"> 38</label>
+        </div>
+        <span class="hint" id="catHint"></span>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="btnQuery">Search</button>
+        <!-- 条件改了但还没查：只给按钮加光圈（.btn-dirty），不再出文字提示
+             —— 用户反馈那句文字没用。光圈已经足够说明"有改动没生效"。 -->
+      </div>
+
+      <!-- 查询进度。一次查询 60~120 秒，光把按钮变灰用户不知道要等多久。
+           ⚠️ 百分比是按经验耗时估算的（后端不上报进度），所以封顶 90%。 -->
+      <div class="qprogress" id="qProgress">
+        <div class="qprogress-bar"><div class="qprogress-fill" id="qFill"></div></div>
+        <div class="qprogress-text">
+          <span class="qprogress-stage" id="qStage">正在查询</span>
+          <span id="qElapsed"></span>
+          <span id="qNote"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 结果提示（EDS inline notification） -->
+  <div id="notice" class="notice hidden"></div>
+
+  <!-- FPY 良率 tile：本项目唯一的良率口径，所以放在最前面 -->
+  <section class="tile hidden" id="tileTrend">
+    <div class="tile-head">
+      <span class="badge-num">2</span>
+      <h2>FPY 良率与趋势</h2>
+      <span class="tile-actions">
+        <select id="fTrendBy" class="sel-inline">
+          <option value="day">按天</option>
+          <option value="week">按周</option>
+          <option value="month">按月</option>
+          <option value="hour">按小时</option>
+        </select>
+        <button class="btn-icon" id="btnExportTrend" title="导出 CSV">↓</button>
+      </span>
+    </div>
+    <div class="tile-body">
+      <div class="kpi-row" id="runKpiRow"></div>
+      <p class="caption" id="trendNote"></p>
+      <canvas id="trendChart" height="210"></canvas>
+      <!-- 原来有两段提示（展开说明 + FPY 口径警告），用户反馈不必要，已删。
+           表头的"第几次"列已有"全部/只第 1 次"下拉筛选，功能自说明。 -->
+      <div class="table-wrap">
+        <table class="tbl" id="tblTrend">
+          <thead><tr>
+            <th></th>
+            <th>时间</th><th class="num">首次测试场次</th><th class="num">通过</th>
+            <th class="num">失败</th><th class="num">FPY 良率</th>
+            <th class="num">涉及整机</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 单次测试明细 tile（RTD 逐迭代曲线） -->
+  <section class="tile hidden" id="tileSession">
+    <div class="tile-head">
+      <span class="badge-num">3</span>
+      <h2>测试曲线（RTD Knock）</h2>
+      <span class="tile-actions">
+        <span id="rtdStatus"></span>
+        <button class="btn-icon" id="btnRtdRefresh" title="刷新 RTD 凭据"
+                style="display:none">↻</button>
+      </span>
+    </div>
+    <div class="tile-body">
+      <!-- 不再手动输入条件：在上面「FPY 良率与趋势」展开 DUT 明细、点某台的
+           「查看」，就在下面新增一张曲线卡片。这几个输入框留着但隐藏，
+           仅作 JS 读写用（RTD 列会话按日期，所以要暂存点中那台的日期）。 -->
+      <div class="inline-form" style="display:none">
+        <input type="date" id="fSessDate">
+        <input type="text" id="fSessProd">
+        <input type="text" id="fSessCat" value="RADIO_PIM">
+        <input type="text" id="fSessSn">
+      </div>
+      <!-- 这个 <p> 由 app.js 写状态消息（凭据过期/刷新中/等等），
+           初始内容为空；用户看不到提示语，但 JS 还要往里写。 -->
+      <p class="caption" id="sessListHint"></p>
+
+      <!-- 每点一台「查看」往这里 append 一张卡片。卡片结构见 app.js 的
+           addCurveCard()，用下面这个 <template> 克隆。 -->
+      <template id="curveCardTpl">
+        <section class="curve-card">
+          <div class="curve-card-head">
+            <span class="curve-card-title"></span>
+            <span class="curve-card-ctl">
+              <label>会话 <select class="selSess sel-inline"></select></label>
+              <label>频率 MHz <select class="selFreq sel-inline"></select></label>
+              <label>分支
+                <select class="selBranch sel-inline">
+                  <option value="">全部 32 个</option>
+                  <option value="0,1,2,3,4,5,6,7">0 – 7</option>
+                  <option value="8,9,10,11,12,13,14,15">8 – 15</option>
+                  <option value="16,17,18,19,20,21,22,23">16 – 23</option>
+                  <option value="24,25,26,27,28,29,30,31">24 – 31</option>
+                </select>
+              </label>
+              <button type="button" class="btn-icon btnRetry" title="重新加载这张图（出错或没出图时用）">↻</button>
+              <button type="button" class="btn-icon btnClose" title="关闭这张图">✕</button>
+            </span>
+          </div>
+          <p class="caption cardHint"></p>
+          <div class="kpi-row cardKpi"></div>
+          <div class="cardPlot plot-box"></div>
+        </section>
+      </template>
+
+      <div id="sessCards"></div>
+    </div>
+  </section>
+
+  <!-- 下层件追踪 tile -->
+  <section class="tile hidden" id="tilePart">
+    <div class="tile-head">
+      <span class="badge-num">4</span>
+      <h2>下层件追踪</h2>
+    </div>
+    <div class="tile-body">
+      <div class="inline-form">
+        <div class="field">
+          <label for="fPartKind">部件类型</label>
+          <select id="fPartKind">
+            <option value="antenna">天线</option>
+            <option value="filter_unit">滤波单元 FU</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fPartSn">序列号</label>
+          <select id="fPartSn"></select>
+        </div>
+        <button class="btn btn-secondary" id="btnPart">View</button>
+      </div>
+      <p class="caption">同一分支在多台整机上反复出现 → 故障跟着这个件走；
+        每次都不同 → 跟着整机走（NFF，未发现故障）。</p>
+      <div id="partResult"></div>
+
+      <!-- 按整机反查：选整机 SN → 级联显示装过的子件 → 看该整机的测试曲线。
+           和上面"按子件追踪"视角相反：那边是"件视角"（一个件装过哪些整机），
+           这边是"整机视角"（一台整机装过哪些件）。 -->
+      <h3 class="part-section-head">按整机反查</h3>
+      <div class="inline-form">
+        <div class="field">
+          <label for="fParentSn">整机 SN</label>
+          <select id="fParentSn"></select>
+        </div>
+        <div class="field">
+          <label for="fParentChildKind">子件类型</label>
+          <select id="fParentChildKind">
+            <option value="antenna">天线</option>
+            <option value="filter_unit">滤波单元 FU</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fParentChildSn">装过的子件 SN</label>
+          <select id="fParentChildSn"></select>
+        </div>
+        <button class="btn btn-secondary" id="btnViewByParent">查看测试结果</button>
+      </div>
+      <div id="parentResult"></div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span id="footMeta"></span>
+  </footer>
+</main>
+
+<script src="/static/vendor/plotly.min.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

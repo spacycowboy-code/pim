@@ -1,0 +1,43 @@
+# Python / IDE / 环境
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+env/
+.vscode/
+.idea/
+.DS_Store
+
+# 测试和临时(镜像里不需要)
+tests/
+_tmp_*
+COMMIT_MSG.txt
+
+# 运行时数据(容器里挂载卷,不入镜像)
+data/
+.backup/
+chart/
+snapshot/
+*.log
+
+# git / CI 元数据
+.git/
+.gitignore
+.gitattributes
+.gitlab-ci.yml
+
+# 文档(镜像不需要)
+README.md
+.kiro/
+
+# 老的 analyze.py 批处理和 Streamlit 入口(当前主服务是 FastAPI api.py)
+analyze.py
+app.py
+bench_curves.py
+extract_serials.py
+fetch_mi.ps1
+
+# PowerShell 启动脚本(Linux 容器里用不到)
+*.ps1

@@ -1,0 +1,66 @@
+[project]
+name = "pim-analysis"
+version = "1.0.0"
+description = "从 MI 查询 PIM 测试数据与良率；Windows 端拉数据，Linux 服务器端只读快照展示"
+requires-python = ">=3.10"
+
+# 核心计算模块（yield_calc.py / structure.py / data_source.py）只用标准库，
+# 所以这里是空的。各场景按需装下面的 extras。
+dependencies = []
+
+[project.optional-dependencies]
+
+# ── 服务器端：只读快照 + 提供网页。不访问 MI，所以不需要认证相关的包 ──
+# 在 Linux 服务器上装这个就够：uv sync --extra server
+server = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+    # 解析登录表单的 POST 数据，FastAPI 的 Form() 需要它
+    "python-multipart>=0.0.9",
+]
+
+# ── Windows 端：拉 MI 数据 ──
+# requests-negotiate-sspi 只能在 Windows 域内用（Kerberos 集成认证），
+# 加平台标记免得在 Linux 上装不上导致整个 sync 失败。
+fetch = [
+    "requests>=2.32.3",
+    "requests-negotiate-sspi>=0.5.2 ; sys_platform == 'win32'",
+]
+
+# ── 出图与表格（旧的 Streamlit 界面和 analyze.py 需要）──
+viz = [
+    "matplotlib>=3.9.2",
+    "numpy>=1.26",
+    "pandas>=2.0",
+    "streamlit>=1.39.0",
+]
+
+# ── RTD 凭据维护 ──
+# RTD（实时测试数据）走 Cloudflare Access，命令行拿不到凭据，只能起一个
+# 真浏览器登录一次再把 Cookie 抓出来，所以要 playwright。
+# 用 channel="chrome" 复用系统已装的 Chrome，不下载 Chromium。
+# MI 那条路走 Kerberos 不需要浏览器，所以单独分一组。
+rtd = [
+    "playwright>=1.47",
+    "requests>=2.32.3",
+]
+
+# ── 开发与测试 ──
+dev = [
+    "pytest>=8.3.3",
+    "openpyxl>=3.1.5",          # 只有 extract_serials.py 读 Excel 要用
+    "httpx>=0.27.2",            # FastAPI 的 TestClient 依赖它
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+    "python-multipart>=0.0.9",  # 登录表单
+    "requests>=2.32.3",
+    "requests-negotiate-sspi>=0.5.2 ; sys_platform == 'win32'",
+    "matplotlib>=3.9.2",
+    "numpy>=1.26",
+    "pandas>=2.0",
+    "playwright>=1.47",         # refresh_cookies.py 和界面上的刷新按钮
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

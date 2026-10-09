@@ -493,6 +493,24 @@ function currentParams() {
   };
 }
 
+// ★ 二选一的参数在两处用：doQuery 发起整次查询时，和 fTrendBy 改趋势粒度
+//   重查趋势时。两处必须用同一套参数构造 —— 否则 sn 模式下换粒度会把
+//   cond 模式的 product/from_date 混进去，后端按错的条件筛，结果区变空。
+//   这是"修了一处 ≠ 全修完"的实例：10-08 修 doQuery 走二选一时，这个
+//   handler 没一起扫到。
+function histParamsFromCurrent() {
+  const p = currentParams();
+  const bySn = QUERY_MODE === 'sn';
+  return {
+    from_date: p.from_date, to_date: p.to_date,
+    product: p.product,
+    sn: p.serial_numbers,
+    category: p.test_category,
+    ant_supplier: bySn ? '' : $('fAntSup').value,
+    fu_supplier: bySn ? '' : $('fFuSup').value,
+  };
+}
+
 /* 条件改了但还没查 —— 提示用户点查询。
 
    为什么需要这个：以前改个供应商下拉会自动重查，所以"改完立刻生效"是
@@ -619,15 +637,7 @@ async function doQuery() {
   // ★ 条件都从 currentParams(p) 来，它已经按查询方式二选一了：
   //   按序列号模式 -> p.serial_numbers 有值、产品/时间为空、供应商不传；
   //   按条件模式   -> 反之。所以这里不要再直接读 #fSns / #fAntSup。
-  const bySn = QUERY_MODE === 'sn';
-  const histParams = {
-    from_date: p.from_date, to_date: p.to_date,
-    product: p.product,
-    sn: p.serial_numbers,
-    category: p.test_category,
-    ant_supplier: bySn ? '' : $('fAntSup').value,
-    fu_supplier: bySn ? '' : $('fFuSup').value,
-  };
+  const histParams = histParamsFromCurrent();
 
   try {
     RUNS_LOADING = true;        // 展开时能区分"正在取"和"还没查"
@@ -1668,16 +1678,10 @@ document.querySelectorAll('.mode-tab').forEach(b => {
   b.addEventListener('click', () => setMode(b.dataset.mode));
 });
 
-// 趋势粒度切换：只重查趋势，不用重查整个良率分解
+// 趋势粒度切换：只重查趋势，不用重查整个良率分解。参数走统一的
+// histParamsFromCurrent()，确保 sn 模式下不把 product/from/to 混进去
 $('fTrendBy').addEventListener('change', () => {
-  if (TREND) doTrend({
-    from_date: dtVal('fFrom'), to_date: dtVal('fTo'),
-    product: $('fProduct').value,
-    sn: parseList($('fSns').value).join(','),
-    category: readCheckedValues('fCat'),
-    ant_supplier: $('fAntSup').value,
-    fu_supplier: $('fFuSup').value,
-  });
+  if (TREND) doTrend(histParamsFromCurrent());
 });
 $('btnExportTrend').addEventListener('click', exportTrend);
 

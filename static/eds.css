@@ -6,6 +6,39 @@
  * 圆角：tile 0 / 控件 3 / card 8
  */
 
+/* ── Ericsson Hilda 字体（EDS 规范字体，4 个字重）────────────────────
+   直接从 react-native-eds-library 的 assets/fonts 复制到 static/fonts/。
+   不加载的话浏览器会悄悄回退到 Arial，整站的 EDS 排版感就丢了。
+   font-display:swap —— 字体没下载完先用回退字体渲染，不白屏。 */
+@font-face{
+  font-family:"Ericsson Hilda";
+  font-weight:300;
+  font-style:normal;
+  font-display:swap;
+  src:url("fonts/EricssonHilda-Light.ttf") format("truetype");
+}
+@font-face{
+  font-family:"Ericsson Hilda";
+  font-weight:400;
+  font-style:normal;
+  font-display:swap;
+  src:url("fonts/EricssonHilda-Regular.ttf") format("truetype");
+}
+@font-face{
+  font-family:"Ericsson Hilda";
+  font-weight:500;
+  font-style:normal;
+  font-display:swap;
+  src:url("fonts/EricssonHilda-Medium.ttf") format("truetype");
+}
+@font-face{
+  font-family:"Ericsson Hilda";
+  font-weight:700;
+  font-style:normal;
+  font-display:swap;
+  src:url("fonts/EricssonHilda-Bold.ttf") format("truetype");
+}
+
 :root{
   /* 唯一交互强调色 */
   --primary:#1174e6; --primary-hover:#0069c2; --primary-press:#005499; --link:#0069c2;
@@ -254,7 +287,7 @@ h1{font-size:40px;font-weight:200;line-height:1.2;margin:0 0 var(--sp);}
 }
 .qprogress-text{
   margin-top:6px;font-size:12px;color:var(--on-secondary);
-  display:flex;gap:var(--sp2);flex-wrap:wrap;
+  display:flex;gap:var(--sp-lg);flex-wrap:wrap;
 }
 .qprogress-stage{color:var(--on);font-weight:700;}
 .inline-form{display:flex;align-items:flex-end;gap:var(--sp-lg);
@@ -280,7 +313,7 @@ h1{font-size:40px;font-weight:200;line-height:1.2;margin:0 0 var(--sp);}
   border:1px solid var(--border);border-radius:var(--r-ctrl);
   color:var(--on);cursor:pointer;font-size:14px;
 }
-.btn-icon:hover{background:var(--fill-hover,#dcdcdc);}
+.btn-icon:hover{background:var(--fill-striped);}
 .chk{display:inline-flex;align-items:center;gap:var(--sp-sm);font-size:14px;}
 
 /* ── tag：12px，文字固定灰色，颜色只在边框和图标 ──── */
@@ -461,9 +494,13 @@ canvas{max-width:100%;}
 .tl-curve-slot:not(:empty){margin-top:var(--sp);}
 .tl-curve-slot .curve-card{box-shadow:none;border:1px solid var(--border-subtle);}
 
-.btn-ghost{background:transparent;border:1px solid var(--border-strong);
-  color:var(--on-primary);}
-.btn-ghost:hover{background:var(--fill-hover);}
+/* .btn-ghost：透明底 + 边框。文字必须是深色(--on)而不是 --on-primary(白色)——
+   档案记过的 bug：白底 + 白字 = 用户完全看不见按钮，之前时间轴项的「查看」就
+   是因为这个被用户忽略。--border-strong 和 --fill-hover 都没定义，这里改成
+   现有的 EDS 变量：边框用 --border(#878787)，hover 底色用 --fill-striped(#ebebeb)。*/
+.btn-ghost{background:transparent;border:1px solid var(--border);
+  color:var(--on);}
+.btn-ghost:hover{background:var(--fill-striped);border-color:var(--border-hover);}
 .btn-sm{padding:4px 10px;font-size:12px;min-height:26px;}
 
 .caption{font-size:12px;color:var(--on-secondary);margin:var(--sp) 0 0;}

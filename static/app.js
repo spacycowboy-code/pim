@@ -912,8 +912,8 @@ function renderDutRows(container, bucket, by) {
       '<tr>' +
         '<th>测试时间</th><th class="num">第几次</th>' +
         '<th>产品号</th><th>整机 SN</th><th>天线供应商</th>' +
-        '<th>滤波器供应商</th><th>结果</th><th>失败分支</th>' +
-        '<th>失败测试点</th><th></th>' +
+        '<th>滤波器供应商</th><th class="num">测试类别</th><th>结果</th>' +
+        '<th>失败分支</th><th>失败测试点</th><th></th>' +
       '</tr>' +
       '<tr class="filter-row">' +
         '<th></th>' +   // 测试时间 — 不筛
@@ -932,7 +932,7 @@ function renderDutRows(container, bucket, by) {
           optTag('', '全部', DUT_FILTER.fu) +
           fuOpts.map(s => optTag(s, s, DUT_FILTER.fu)).join('') +
         '</select></th>' +
-        '<th></th><th></th><th></th><th></th>' +   // 结果/分支/测试点/查看 — 不筛
+        '<th></th><th></th><th></th><th></th><th></th>' +   // 测试类别/结果/分支/测试点/查看 — 不筛
       '</tr>' +
     '</thead>';
   // 筛选控件：change 事件写回 DUT_FILTER + 重画所有展开桶
@@ -972,6 +972,11 @@ function renderDutRows(container, bucket, by) {
     add(x.serial_number || '—');
     add((x.ant_suppliers || []).join(' / ') || '—');
     add((x.fu_suppliers || []).join(' / ') || '—');
+    // 测试类别:MI 的 cat 字段,整数值。界面只显示数字,不加业务说明
+    // (用户定的,见 project-context 的"控件清单"节)。类别决定了后面
+    // "失败分支/测试点"是否有数据(非 PIM 类别那两列通常是空),所以
+    // 放在它们前面,语义上更连贯。
+    add(String(x.category ?? '—'));
     add(x.passed ? tag('通过', 'green', '✓') : tag('失败', 'orange', '◐'));
     // 用户明确要求：只有 fail 才显示分支，pass 不加。
     // 失败但分支为空，要按后台加载状态分清是"还在查"还是"查了没有"

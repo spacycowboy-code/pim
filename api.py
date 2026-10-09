@@ -1,7 +1,7 @@
 """PIM 查询工具的后端接口。
 
 **数据一律实时从 MI / RTD 拉取**，不读任何事先下载到本地的副本。
-所以这个服务必须跑在有 Windows 域身份的机器上（MI 走集成 Windows 认证）。
+MI 认证支持 Windows SSPI 或 Linux Kerberos ticket（见 LINUX.md）。
 
 只有 GET 接口，没有任何写操作（唯一的例外是刷新 RTD 凭据，只接受本机直连）。
 
@@ -32,6 +32,7 @@ import data_source as ds
 import structure as st_mod
 import yield_calc as yc
 import curves
+from rtd_config import cookie_path, template_path
 
 HERE = Path(__file__).resolve().parent
 STATIC_DIR = HERE / "static"
@@ -206,7 +207,7 @@ def do_logout(request: Request) -> Response:
 # 原来这里有个 PIM_SOURCE 开关，可以切成读本地快照文件。默认值是快照，
 # 所以启动时忘了设开关就会悄悄用过期数据，界面还一切正常。那条路已移除。
 #
-# 代价：服务必须跑在有 Windows 域身份的机器上，否则取不到数。
+# 实时查询需要有效的 Windows 域身份或 Linux Kerberos ticket。
 # ---------------------------------------------------------------------------
 
 _source: Any = None
@@ -343,6 +344,7 @@ def health() -> dict:
     offline=true      证明这个服务不访问 MI
     auth_enabled=false 说明服务是开放状态——对外开放时这个值必须是 true
     """
+    _try_load_rtd()
     return {
         "status": "ok" if _source is not None else "degraded",
         # 这两个字段留着，因为启动脚本和前端会读它们确认"数据是实时的"。
@@ -1260,15 +1262,14 @@ def get_curves(
 #      且不报错），是实测踩过的坑，所以接口层不给默认值。
 # ---------------------------------------------------------------------------
 
-RTD_COOKIE_FILE = Path(
-    os.environ.get("PIM_RTD_COOKIES", HERE / "data/rtd/cookies.json"))
+RTD_COOKIE_FILE = cookie_path()
 
 _rtd: Any = None
 _rtd_error: str | None = None
 
 try:
     import rtd_client
-    _rtd = rtd_client.RtdClient(cookie_file=RTD_COOKIE_FILE)
+    _rtd = rtd_client.RtdClient(cookie_file=RTD_COOKIE_FILE, template_file=template_path())
 except Exception as e:                                   # pragma: no cover
     # 没有 cookie 文件是常见情况（比如服务器上），不该让整个服务起不来
     _rtd_error = f"{type(e).__name__}: {e}"
@@ -1278,6 +1279,25 @@ except Exception as e:                                   # pragma: no cover
 _rtd_sess_cache: dict[str, dict] = {}
 # 哪些日期已经全量查过（全量 = 不带任何过滤条件）
 _rtd_dates_loaded: set[str] = set()
+
+_rtd_load_lock = threading.Lock()
+
+
+def _try_load_rtd():
+    """Recover when the first credentials are created after API startup."""
+    global _rtd, _rtd_error
+    if _rtd is not None or not RTD_COOKIE_FILE.exists():
+        return
+    with _rtd_load_lock:
+        if _rtd is not None:
+            return
+        try:
+            import rtd_client
+            _rtd = rtd_client.RtdClient(cookie_file=RTD_COOKIE_FILE,
+                                       template_file=template_path())
+            _rtd_error = None
+        except Exception as exc:
+            _rtd_error = f"{type(exc).__name__}: {exc}"
 
 
 def rtd_sessions_cache_clear() -> None:
@@ -1292,18 +1312,19 @@ def _rtd_key(device_id: str, start_time: str) -> str:
 
 def _rtd_or_503():
     """拿 RTD 客户端，不可用就给出能照着做的提示。"""
+    _try_load_rtd()
     if _rtd is None:
         raise HTTPException(
             503,
             f"RTD 不可用：{_rtd_error}。"
-            f"在 Windows 上跑 refresh_cookies.py 抓一份凭据到 "
+            f"在有浏览器的环境运行 refresh_cookies.py 抓一份凭据到 "
             f"{RTD_COOKIE_FILE}。")
     if _rtd.cookie_expired():
         left = _rtd.cookie_hours_left()
         raise HTTPException(
             503,
             f"RTD 凭据已过期（{left:.1f} 小时前失效）。"
-            f"在 Windows 上重跑 refresh_cookies.py 刷新。")
+            f"重跑 refresh_cookies.py 刷新；需要 SSO 时使用可见浏览器。")
     return _rtd
 
 

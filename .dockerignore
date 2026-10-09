@@ -41,3 +41,6 @@ fetch_mi.ps1
 
 # PowerShell 启动脚本(Linux 容器里用不到)
 *.ps1
+linux.env
+*.keytab
+krb5cc*

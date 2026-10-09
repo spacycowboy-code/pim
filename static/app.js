@@ -1761,7 +1761,7 @@ async function initSession() {
       '。' + (canRefresh
         ? '点右上角的 ↻ 刷新（多数情况不用管弹出的窗口，它会自己跑完；'
           + '只有连登录态也失效时才要在窗口里登录）。'
-        : '在 Windows 上跑 refresh_cookies.py 在浏览器里登录一次。');
+        : '请管理员运行 refresh_cookies.py，在服务端可见浏览器中完成登录。');
     return;
   }
 

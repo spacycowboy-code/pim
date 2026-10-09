@@ -58,3 +58,6 @@ config/.env
 
 # 本地覆盖的 commit 消息草稿
 COMMIT_MSG.txt
+linux.env
+*.keytab
+krb5cc*

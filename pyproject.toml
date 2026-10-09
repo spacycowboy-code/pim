@@ -1,7 +1,7 @@
 [project]
 name = "pim-analysis"
 version = "1.0.0"
-description = "从 MI 查询 PIM 测试数据与良率；Windows 端拉数据，Linux 服务器端只读快照展示"
+description = "实时查询 MI/RTD 的 PIM Web 服务，支持 Windows SSPI 与 Linux Kerberos"
 requires-python = ">=3.10"
 
 # 核心计算模块（yield_calc.py / structure.py / data_source.py）只用标准库，
@@ -10,13 +10,22 @@ dependencies = []
 
 [project.optional-dependencies]
 
-# ── 服务器端：只读快照 + 提供网页。不访问 MI，所以不需要认证相关的包 ──
-# 在 Linux 服务器上装这个就够：uv sync --extra server
+# ── Web/API 基础依赖；Linux 实时取数请使用 linux extra ──
 server = [
+    "requests>=2.32.3",
     "fastapi>=0.115.0",
     "uvicorn>=0.32.0",
     # 解析登录表单的 POST 数据，FastAPI 的 Form() 需要它
     "python-multipart>=0.0.9",
+]
+
+# Linux 实时取数；使用系统 Kerberos ticket cache（先执行 kinit）。
+linux = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+    "python-multipart>=0.0.9",
+    "requests>=2.32.3",
+    "requests-gssapi>=1.3.0 ; sys_platform == 'linux'",
 ]
 
 # ── Windows 端：拉 MI 数据 ──
@@ -38,7 +47,7 @@ viz = [
 # ── RTD 凭据维护 ──
 # RTD（实时测试数据）走 Cloudflare Access，命令行拿不到凭据，只能起一个
 # 真浏览器登录一次再把 Cookie 抓出来，所以要 playwright。
-# 用 channel="chrome" 复用系统已装的 Chrome，不下载 Chromium。
+# Windows 默认复用系统 Chrome/Edge；Linux 默认使用 Playwright Chromium。
 # MI 那条路走 Kerberos 不需要浏览器，所以单独分一组。
 rtd = [
     "playwright>=1.47",

@@ -93,15 +93,52 @@ if ($Reload) {
     exit 1
 }
 
-# 后台起，然后等它就绪
-$job = Start-Job -ScriptBlock {
-    Set-Location $using:PSScriptRoot
-    & $using:py -m uvicorn api:app --host 127.0.0.1 --port $using:Port 2>&1
+# ── 后台模式：用 Start-Process 启独立进程 ───────────────────────────────
+# 以前用 Start-Job，但 Start-Job 启的进程绑在当前 PowerShell 会话里，
+# 关 shell 服务会跟着死。改成 Start-Process -WindowStyle Hidden 后：
+#   - 启的是独立操作系统进程，和本 shell 无血缘关系
+#   - 关 shell、注销桌面都不影响服务
+#   - 代价：Hidden 窗口的 stdout/stderr 默认会被丢掉，必须显式重定向到文件
+
+# 1. 启动前先看端口是不是已经被占了。如果占的是本服务，直接重用；
+#    是别的进程占的就报错让用户决定。
+$existing = Get-NetTCPConnection -LocalPort $Port -State Listen -EA SilentlyContinue |
+            Select-Object -First 1
+if ($existing) {
+    $ownerPid = $existing.OwningProcess
+    try {
+        $h = Invoke-RestMethod "$url/api/health" -TimeoutSec 3
+        if ($h.status -eq 'ok') {
+            Write-Host "  端口 $Port 已经在用，而且是本服务(PID=$ownerPid)。" -ForegroundColor Yellow
+            Write-Host "  直接用现在的那个即可。要重启：Stop-Process -Id $ownerPid -Force 再跑本脚本"
+            if (-not $NoBrowser) { Start-Process $url }
+            exit 0
+        }
+    } catch { }
+    Write-Host "  [错误] 端口 $Port 被别的进程占用(PID=$ownerPid)。" -ForegroundColor Red
+    Write-Host "         先停掉它：Stop-Process -Id $ownerPid -Force"
+    exit 1
 }
 
+# 2. 日志目录。每次启动都从头写(覆盖，而非追加)——方便看最新一次日志。
+$logDir = Join-Path $PSScriptRoot 'logs'
+if (-not (Test-Path $logDir)) { New-Item $logDir -ItemType Directory -Force | Out-Null }
+$outLog = Join-Path $logDir 'uvicorn.out.log'
+$errLog = Join-Path $logDir 'uvicorn.err.log'
+
+# 3. 启独立进程。-PassThru 让 Start-Process 返回 Process 对象，拿它的 .Id
+#    当 PID 用。-WorkingDirectory 保证 python 以项目根为工作目录。
+$proc = Start-Process -FilePath $py -PassThru -WindowStyle Hidden `
+    -WorkingDirectory $PSScriptRoot `
+    -ArgumentList @('-m','uvicorn','api:app','--host','127.0.0.1','--port',$Port) `
+    -RedirectStandardOutput $outLog `
+    -RedirectStandardError  $errLog
+
+# 4. 轮询 /api/health 等就绪(最多 ~21 秒)
 $ready = $false
 foreach ($i in 1..30) {
     Start-Sleep -Milliseconds 700
+    if ($proc.HasExited) { break }      # 进程挂了就不用再等
     try {
         $h = Invoke-RestMethod "$url/api/health" -TimeoutSec 3
         if ($h.status -eq 'ok') { $ready = $true; break }
@@ -109,15 +146,20 @@ foreach ($i in 1..30) {
 }
 
 if (-not $ready) {
-    Write-Host "  [错误] 服务没起来。日志：" -ForegroundColor Red
-    Receive-Job $job | Select-Object -Last 20
-    Stop-Job $job -EA SilentlyContinue; Remove-Job $job -Force -EA SilentlyContinue
+    Write-Host "  [错误] 服务没起来。错误日志末尾：" -ForegroundColor Red
+    if (Test-Path $errLog) { Get-Content $errLog -Tail 20 }
+    if (-not $proc.HasExited) {
+        Stop-Process -Id $proc.Id -Force -EA SilentlyContinue
+    }
     exit 1
 }
 
-Write-Host "  服务已启动（后台任务 Id=$($job.Id)）" -ForegroundColor Green
+Write-Host "  服务已启动(独立进程 PID=$($proc.Id))" -ForegroundColor Green
+Write-Host "  这是独立进程，关掉本 PowerShell 窗口服务不会死。" -ForegroundColor Green
 Write-Host ""
-Write-Host "  停止：Stop-Job $($job.Id); Remove-Job $($job.Id)"
-Write-Host "  看日志：Receive-Job $($job.Id)"
+Write-Host "  停止：      Stop-Process -Id $($proc.Id) -Force"
+Write-Host "  健康检查：  Invoke-RestMethod $url/api/health"
+Write-Host "  实时日志：  Get-Content '$outLog' -Tail 30 -Wait"
+Write-Host "  错误日志：  Get-Content '$errLog' -Tail 30"
 Write-Host ""
 if (-not $NoBrowser) { Start-Process $url }

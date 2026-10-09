@@ -685,10 +685,32 @@ def history_runs(
 
     page = runs[:limit]
 
-    # 供应商：和"实时列整机"共享同一个 UnitProductStructure 响应，不额外花时间
-    sup_map = s.suppliers_for(product=product or None,
-                              from_date=from_date or None,
-                              to_date=to_date or None)
+    # 供应商:和"实时列整机"共享同一个 UnitProductStructure 响应,不额外花时间。
+    # ★ sn 模式(用户只给序列号、product/from/to 都是空)下不能直接传
+    #   (None,None,None):MI 的 UnitProductStructure 要求产品必填,全 None
+    #   会让服务端产品必填组爆炸(实测 >20 分钟不返回),然后 suppliers_for
+    #   的 try/except 把异常吞成空 dict —— 用户看到两列全空。
+    #   供应商不随时间变(用户指出的客观事实),这里"反推日期范围"只是
+    #   为了绕过 MI 接口的"必填组"限制。从 runs 的 product + started
+    #   反推,按产品分组分别查。有缓存就 0 代价,没缓存一次约 15 秒。
+    if sn and not product:
+        sup_map: dict[str, dict[str, list[str]]] = {}
+        by_product: dict[str, list] = {}
+        for r in runs:
+            if r.product:
+                by_product.setdefault(r.product, []).append(r)
+        for prod, prod_runs in by_product.items():
+            starts = [x.started for x in prod_runs if x.started]
+            if not starts:
+                continue
+            prod_from = min(starts).strftime("%Y-%m-%d 00:00")
+            prod_to = max(starts).strftime("%Y-%m-%d 23:59")
+            sup_map.update(s.suppliers_for(
+                product=prod, from_date=prod_from, to_date=prod_to))
+    else:
+        sup_map = s.suppliers_for(product=product or None,
+                                  from_date=from_date or None,
+                                  to_date=to_date or None)
 
     # 失败分支：只对**失败的**整机查（单台约 30 秒，8 路并行）。
     # 通过的机器查了是白等，所以按需、且只传失败的。

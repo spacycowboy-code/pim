@@ -375,6 +375,45 @@ def test_场次明细带产品号和供应商(make_live_client):
     assert isinstance(r["passed"], bool)     # 测试结果
 
 
+def test_sn模式查供应商时按产品日期调unit_structure(make_live_client):
+    """★ sn 模式(只给序列号)下,product/from/to 都是空。直接调
+    suppliers_for(None, None, None) 会让 MI 的 UnitProductStructure
+    产品必填组爆炸(>20 分钟不返回),被 try/except 吞成空供应商,
+    用户看到两列全空 —— cond 模式有、sn 模式没,就是这个坑。
+
+    修法:从 runs 的 product + started 反推产品+日期范围,按产品分组
+    分别调 suppliers_for。供应商不随时间变,这个"反推日期"只是绕过
+    MI 接口的"必填组"限制。
+    """
+    c = make_live_client(HistClient(hist=HIST, repairs=REPAIRS, structs=STRUCTS))
+    import api
+    # 清掉 fixture 预填的 (None,None,None),让后端必须真调 unit_structure
+    # 否则 cache 命中会掩盖 bug —— fixture 预填掩盖生产行为是档案记过的
+    # "验证手段自己要可信"的实例。
+    api._source._ups_cache.clear()
+    api._source.client.calls.clear()
+
+    rows = c.get("/api/history/runs", params={"sn": "EA001"}).json()["rows"]
+    assert rows, "sn 查应该有数据"
+
+    # 行为层:供应商要有值
+    for r in rows:
+        assert r["ant_suppliers"], \
+            f"sn 模式天线供应商为空: {r['serial_number']}"
+        assert r["fu_suppliers"], \
+            f"sn 模式滤波器供应商为空: {r['serial_number']}"
+
+    # 实现层:绝不能用 product=None 调 unit_structure(MI 必填组爆炸)
+    us_calls = [kw for name, kw in api._source.client.calls
+                if name == "unit_structure"]
+    assert us_calls, "sn 模式应该调 unit_structure 拿供应商"
+    for kw in us_calls:
+        assert kw.get("product") is not None, \
+            f"sn 模式 unit_structure 调用必须带 product(从 runs 反推), 实际 {kw}"
+        assert kw.get("from_date") is not None, \
+            f"sn 模式 unit_structure 调用必须带 from_date, 实际 {kw}"
+
+
 def test_失败的场次才带失败分支(make_live_client):
     """用户明确要求：fail 才显示对应的 branch，pass 不用加。
 

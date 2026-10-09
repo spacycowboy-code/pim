@@ -23,17 +23,19 @@ Dash 的回调请求体里 inputs/state 的确切分布是框架实现细节，�
 ----
     uv run refresh_cookies.py
 """
+import argparse
 import json
 import time
 from pathlib import Path
 from urllib.parse import urlparse
 
 from playwright.sync_api import sync_playwright
+from rtd_config import cookie_path, template_path, profile_path, browser_channels, atomic_json
 
 HOST = "jupyter.radiounits-realtimetestdata.ericsson.net"
 DRILL = f"https://{HOST}/app/dashboard/drill_down"
-PROFILE = Path.home() / ".kiro" / "browser-profiles" / "ericsson-cf"
-OUT_DIR = Path(__file__).resolve().parent / "data" / "rtd"
+PROFILE = profile_path()
+OUT_DIR = cookie_path().parent
 
 # 要抓哪些回调。键是模板名，值是 output 里的特征串。
 WANTED = {
@@ -64,25 +66,29 @@ SEED_B64 = ("eJxVT11vgjAU_SukT1uirC2iwJuJPphl06BvY2nuoGo3bAkty4zxv--WqZl96r3n"
             "coakA-gOLga13EF59P_z-y9lOpDj")
 
 
-def main() -> int:
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description="刷新 RTD 登录态；默认打开可见浏览器完成 SSO。")
+    parser.add_argument("--headless", action="store_true",
+                        help="复用已有登录态；需要交互认证时退出，不会自动输入密码或 MFA。")
+    args = parser.parse_args(argv)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     PROFILE.mkdir(parents=True, exist_ok=True)
     captured: dict[str, dict] = {}
 
     with sync_playwright() as p:
         ctx = None
-        for ch in ("chrome", "msedge"):
+        for ch in browser_channels():
             try:
                 ctx = p.chromium.launch_persistent_context(
-                    user_data_dir=str(PROFILE), headless=False, channel=ch,
+                    user_data_dir=str(PROFILE), headless=args.headless, channel=ch,
                     args=["--start-maximized"], no_viewport=True,
-                    ignore_https_errors=True)
+                    ignore_https_errors=False)
                 print(f"用浏览器: {ch}", flush=True)
                 break
             except Exception as e:
                 print(f"  起 {ch} 失败: {str(e)[:90]}", flush=True)
         if ctx is None:
-            print("没有可用浏览器（需要本机装了 Chrome 或 Edge）")
+            print("没有可用浏览器。Linux 请运行 playwright install --with-deps chromium；交互登录需要 DISPLAY。")
             return 3
 
         def grab(req):
@@ -113,6 +119,10 @@ def main() -> int:
             print(f"  首次导航异常（通常是跳登录页）: {str(e)[:100]}", flush=True)
 
         if urlparse(page.url).hostname != HOST:
+            if args.headless:
+                print("需要人工 SSO 登录：请不带 --headless，在可见浏览器里运行本脚本。", flush=True)
+                ctx.close()
+                return 2
             print("\n>>> 请在弹出的窗口里完成单点登录，最多等 300 秒 <<<\n",
                   flush=True)
             dl = time.time() + 300
@@ -184,10 +194,13 @@ def main() -> int:
         page.wait_for_timeout(4000)
 
         cookies = ctx.cookies()
-        (OUT_DIR / "cookies.json").write_text(
-            json.dumps(cookies, indent=2, ensure_ascii=False), encoding="utf-8")
         mine = [c for c in cookies
                 if HOST.endswith(str(c.get("domain", "")).lstrip("."))]
+        if not mine:
+            print("未取得 RTD 域的 Cookie，保留旧凭据。")
+            ctx.close()
+            return 2
+        atomic_json(cookie_path(), mine)
         exps = [c["expires"] for c in mine
                 if isinstance(c.get("expires"), (int, float)) and c["expires"] > 0]
         print(f"\nCookie 已存：{len(mine)} 个本域 Cookie")
@@ -203,7 +216,7 @@ def main() -> int:
     missing = [n for n in WANTED if n not in captured]
 
     if captured:
-        old_path = OUT_DIR / "templates.json"
+        old_path = template_path()
         old = {}
         if old_path.exists():
             try:
@@ -211,8 +224,7 @@ def main() -> int:
             except Exception:
                 old = {}
         old.update(captured)          # 这次没抓到的保留上次的
-        old_path.write_text(json.dumps(old, indent=2, ensure_ascii=False),
-                            encoding="utf-8")
+        atomic_json(old_path, old)
         print(f"\n模板已存：{old_path}  （共 {len(old)} 个）")
 
     # 只有缺**必需**模板才算失败。退出码是给调用方（界面上的刷新按钮）

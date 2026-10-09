@@ -224,6 +224,13 @@ class RtdClient:
     # ---------- 底层 ----------
 
     def _tpl(self, name: str) -> dict:
+        # Templates can be created/refreshed after the API has started.
+        if self.template_file.exists():
+            try:
+                current = json.loads(self.template_file.read_text(encoding="utf-8"))
+                self._templates.update(current)
+            except (OSError, ValueError):
+                pass
         if name not in self._templates:
             raise RuntimeError(
                 f"缺少请求模板 [{name}]：{self.template_file}\n"

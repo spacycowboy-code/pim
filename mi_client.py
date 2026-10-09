@@ -1,8 +1,7 @@
 """MI (Manufacturing Intelligence，制造智能) 接口客户端。
 
-MI 用的是"集成 Windows 认证"——服务器信任你当前登录的域账号，
-不需要另外申请权限或申请令牌。这里用 requests_negotiate_sspi 实现，
-效果等同 PowerShell 的 -UseDefaultCredentials。
+MI 使用 Negotiate 认证：Windows 默认复用 SSPI 域身份；Linux 使用
+requests-gssapi 和系统 Kerberos ticket cache（见 LINUX.md）。
 
 两种查询模式，用途完全不同：
   聚合模式  多个序列号逗号传（或干脆不填序列号）-> 按测试点聚合的统计。
@@ -603,13 +602,12 @@ class MiClient:
 
     @property
     def session(self):
-        """延迟创建会话。requests_negotiate_sspi 只在 Windows 域内可用，
-        所以推迟到真正要发请求时才导入，单元测试不受影响。"""
+        """延迟创建平台对应的认证会话，离线计算和测试不加载认证依赖。"""
         if self._session is None:
             import requests
-            from requests_negotiate_sspi import HttpNegotiateAuth
+            from mi_auth import create_auth
             s = requests.Session()
-            s.auth = HttpNegotiateAuth()
+            s.auth = create_auth()
             self._session = s
         return self._session
 

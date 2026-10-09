@@ -1,0 +1,20 @@
+[Unit]
+Description=PIM Linux Web service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pim
+Group=pim
+WorkingDirectory=/opt/pim
+EnvironmentFile=/opt/pim/linux.env
+ExecStart=/bin/bash /opt/pim/start-linux.sh
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

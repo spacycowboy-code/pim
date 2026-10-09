@@ -1,5 +1,10 @@
 # PIM 测试数据查询工具
 
+## Linux 试用部署
+
+已加入 Linux Kerberos、可配置 RTD 浏览器/凭据路径，以及原生/systemd/Docker 启动方式。
+请先看 [LINUX.md](LINUX.md)，验证 MI 与 RTD 认证后再部署。Windows SSPI 仍保留。
+
 从 MI（Manufacturing Intelligence，制造智能）查生产测试数据，算 PIM
 （Passive Intermodulation，无源互调）良率，追踪下层件（天线、滤波单元）的表现。
 
